@@ -154,6 +154,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class UserLocalServiceImpl extends UserLocalServiceBaseImpl {
 
+	
 	/**
 	 * Adds the user to the default groups, unless the user is already in these
 	 * groups. The default groups can be specified in
