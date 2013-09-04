@@ -27,13 +27,13 @@ import com.liferay.portal.kernel.util.PropertiesUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.ServerDetector;
 import com.liferay.portal.kernel.util.SortedProperties;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.util.FileImpl;
 import com.liferay.portal.util.HttpImpl;
 import com.liferay.portal.util.JarUtil;
 import com.liferay.portal.util.PropsUtil;
 import com.liferay.portal.util.PropsValues;
-import com.liferay.util.PwdGenerator;
 
 import com.mchange.v2.c3p0.ComboPooledDataSource;
 
@@ -175,13 +175,19 @@ public class DataSourceFactoryImpl implements DataSourceFactory {
 		return initDataSource(properties);
 	}
 
+	public static interface PACL {
+
+		public DataSource getDataSource(DataSource dataSource);
+
+	}
+
 	protected DataSource initDataSourceC3PO(Properties properties)
 		throws Exception {
 
 		ComboPooledDataSource comboPooledDataSource =
 			new ComboPooledDataSource();
 
-		String identityToken = PwdGenerator.getPassword(PwdGenerator.KEY2, 8);
+		String identityToken = StringUtil.randomString();
 
 		comboPooledDataSource.setIdentityToken(identityToken);
 
@@ -275,7 +281,7 @@ public class DataSourceFactoryImpl implements DataSourceFactory {
 			}
 		}
 
-		String poolName = PwdGenerator.getPassword(PwdGenerator.KEY2, 8);
+		String poolName = StringUtil.randomString();
 
 		poolProperties.setName(poolName);
 
@@ -409,12 +415,6 @@ public class DataSourceFactoryImpl implements DataSourceFactory {
 		public DataSource getDataSource(DataSource dataSource) {
 			return dataSource;
 		}
-
-	}
-
-	public static interface PACL {
-
-		public DataSource getDataSource(DataSource dataSource);
 
 	}
 

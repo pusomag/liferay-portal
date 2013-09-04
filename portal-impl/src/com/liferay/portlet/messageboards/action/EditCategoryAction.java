@@ -24,6 +24,7 @@ import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.security.auth.PrincipalException;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.service.ServiceContextFactory;
@@ -153,6 +154,8 @@ public class EditCategoryAction extends PortletAction {
 		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
 			WebKeys.THEME_DISPLAY);
 
+		String deleteEntryTitle = null;
+
 		long[] deleteCategoryIds = null;
 
 		long categoryId = ParamUtil.getLong(actionRequest, "mbCategoryId");
@@ -165,9 +168,16 @@ public class EditCategoryAction extends PortletAction {
 				ParamUtil.getString(actionRequest, "deleteCategoryIds"), 0L);
 		}
 
-		for (long deleteCategoryId : deleteCategoryIds) {
+		for (int i = 0; i < deleteCategoryIds.length; i++) {
+			long deleteCategoryId = deleteCategoryIds[i];
+
 			if (moveToTrash) {
-				MBCategoryServiceUtil.moveCategoryToTrash(deleteCategoryId);
+				MBCategory category = MBCategoryServiceUtil.moveCategoryToTrash(
+					deleteCategoryId);
+
+				if (i == 0) {
+					deleteEntryTitle = category.getName();
+				}
 			}
 			else {
 				MBCategoryServiceUtil.deleteCategory(
@@ -179,6 +189,14 @@ public class EditCategoryAction extends PortletAction {
 			Map<String, String[]> data = new HashMap<String, String[]>();
 
 			data.put(
+				"deleteEntryClassName",
+				new String[] {MBCategory.class.getName()});
+
+			if (Validator.isNotNull(deleteEntryTitle)) {
+				data.put("deleteEntryTitle", new String[] {deleteEntryTitle});
+			}
+
+			data.put(
 				"restoreCategoryIds",
 				ArrayUtil.toStringArray(deleteCategoryIds));
 
@@ -187,10 +205,7 @@ public class EditCategoryAction extends PortletAction {
 				liferayPortletConfig.getPortletId() +
 					SessionMessages.KEY_SUFFIX_DELETE_SUCCESS_DATA, data);
 
-			SessionMessages.add(
-				actionRequest,
-				liferayPortletConfig.getPortletId() +
-					SessionMessages.KEY_SUFFIX_HIDE_DEFAULT_SUCCESS_MESSAGE);
+			hideDefaultSuccessMessage(liferayPortletConfig, actionRequest);
 		}
 	}
 

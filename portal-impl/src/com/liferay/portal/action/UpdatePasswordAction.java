@@ -125,11 +125,10 @@ public class UpdatePasswordAction extends Action {
 
 				return actionMapping.findForward("portal.error");
 			}
-			else {
-				PortalUtil.sendError(e, request, response);
 
-				return null;
-			}
+			PortalUtil.sendError(e, request, response);
+
+			return null;
 		}
 	}
 
@@ -150,9 +149,8 @@ public class UpdatePasswordAction extends Action {
 			if (!ticket.isExpired()) {
 				return ticket;
 			}
-			else {
-				TicketLocalServiceUtil.deleteTicket(ticket);
-			}
+
+			TicketLocalServiceUtil.deleteTicket(ticket);
 		}
 		catch (Exception e) {
 		}
@@ -232,6 +230,8 @@ public class UpdatePasswordAction extends Action {
 			}
 
 			LoginUtil.login(request, response, login, password1, false, null);
+
+			UserLocalServiceUtil.updatePasswordReset(userId, false);
 		}
 		else if (PropsValues.SESSION_STORE_PASSWORD) {
 			HttpSession session = request.getSession();

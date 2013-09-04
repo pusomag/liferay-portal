@@ -21,9 +21,13 @@ import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.security.auth.PrincipalException;
 import com.liferay.portal.struts.PortletAction;
 import com.liferay.portlet.messageboards.LockedThreadException;
+import com.liferay.portlet.messageboards.model.MBMessage;
+import com.liferay.portlet.messageboards.model.MBThread;
+import com.liferay.portlet.messageboards.service.MBMessageLocalServiceUtil;
 import com.liferay.portlet.messageboards.service.MBThreadServiceUtil;
 
 import java.util.HashMap;
@@ -83,6 +87,8 @@ public class DeleteThreadAction extends PortletAction {
 			ActionRequest actionRequest, boolean moveToTrash)
 		throws Exception {
 
+		String deleteEntryTitle = null;
+
 		long[] deleteThreadIds = null;
 
 		long threadId = ParamUtil.getLong(actionRequest, "threadId");
@@ -95,9 +101,19 @@ public class DeleteThreadAction extends PortletAction {
 				ParamUtil.getString(actionRequest, "threadIds"), 0L);
 		}
 
-		for (long deleteThreadId : deleteThreadIds) {
+		for (int i = 0; i < deleteThreadIds.length; i++) {
+			long deleteThreadId = deleteThreadIds[i];
+
 			if (moveToTrash) {
-				MBThreadServiceUtil.moveThreadToTrash(deleteThreadId);
+				MBThread thread = MBThreadServiceUtil.moveThreadToTrash(
+					deleteThreadId);
+
+				if (i == 0) {
+					MBMessage message = MBMessageLocalServiceUtil.getMessage(
+						thread.getRootMessageId());
+
+					deleteEntryTitle = message.getSubject();
+				}
 			}
 			else {
 				MBThreadServiceUtil.deleteThread(deleteThreadId);
@@ -108,6 +124,14 @@ public class DeleteThreadAction extends PortletAction {
 			Map<String, String[]> data = new HashMap<String, String[]>();
 
 			data.put(
+				"deleteEntryClassName",
+				new String[] {MBThread.class.getName()});
+
+			if (Validator.isNotNull(deleteEntryTitle)) {
+				data.put("deleteEntryTitle", new String[] {deleteEntryTitle});
+			}
+
+			data.put(
 				"restoreThreadIds", ArrayUtil.toStringArray(deleteThreadIds));
 
 			SessionMessages.add(
@@ -115,10 +139,7 @@ public class DeleteThreadAction extends PortletAction {
 				liferayPortletConfig.getPortletId() +
 					SessionMessages.KEY_SUFFIX_DELETE_SUCCESS_DATA, data);
 
-			SessionMessages.add(
-				actionRequest,
-				liferayPortletConfig.getPortletId() +
-					SessionMessages.KEY_SUFFIX_HIDE_DEFAULT_SUCCESS_MESSAGE);
+			hideDefaultSuccessMessage(liferayPortletConfig, actionRequest);
 		}
 	}
 

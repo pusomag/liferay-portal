@@ -23,12 +23,23 @@ String[] tempFileEntryNames = LayoutServiceUtil.getTempFileEntryNames(scopeGroup
 %>
 
 <liferay-ui:tabs
-	names="new-import-process,all-import-processes"
+	names="new-import-process,current-and-previous"
 	param="tabs3"
 	refresh="<%= false %>"
 >
 	<liferay-ui:section>
 		<div id="<portlet:namespace />exportImportOptions">
+
+			<%
+			int incompleteBackgroundTaskCount = BackgroundTaskLocalServiceUtil.getBackgroundTasksCount(themeDisplay.getScopeGroupId(), selPortlet.getPortletId(), PortletImportBackgroundTaskExecutor.class.getName(), false);
+			%>
+
+			<div class="<%= (incompleteBackgroundTaskCount == 0) ? "hide" : "in-progress" %>" id="<portlet:namespace />incompleteProcessMessage">
+				<liferay-util:include page="/html/portlet/layouts_admin/incomplete_processes_message.jsp">
+					<liferay-util:param name="incompleteBackgroundTaskCount" value="<%= String.valueOf(incompleteBackgroundTaskCount) %>" />
+				</liferay-util:include>
+			</div>
+
 			<c:choose>
 				<c:when test="<%= (tempFileEntryNames.length > 0) && !validate %>">
 					<liferay-util:include page="/html/portlet/portlet_configuration/import_portlet_resources.jsp" />
@@ -41,82 +52,29 @@ String[] tempFileEntryNames = LayoutServiceUtil.getTempFileEntryNames(scopeGroup
 	</liferay-ui:section>
 
 	<liferay-ui:section>
-
-		<%
-		String orderByCol = ParamUtil.getString(request, "orderByCol");
-		String orderByType = ParamUtil.getString(request, "orderByType");
-
-		if (Validator.isNotNull(orderByCol) && Validator.isNotNull(orderByType)) {
-			portalPreferences.setValue(PortletKeys.BACKGROUND_TASK, "entries-order-by-col", orderByCol);
-			portalPreferences.setValue(PortletKeys.BACKGROUND_TASK, "entries-order-by-type", orderByType);
-		}
-		else {
-			orderByCol = portalPreferences.getValue(PortletKeys.BACKGROUND_TASK, "entries-order-by-col", "create-date");
-			orderByType = portalPreferences.getValue(PortletKeys.BACKGROUND_TASK, "entries-order-by-type", "desc");
-		}
-
-		OrderByComparator orderByComparator = BackgroundTaskUtil.getBackgroundTaskOrderByComparator(orderByCol, orderByType);
-
-		PortletURL portletURL = currentURLObj;
-
-		portletURL.setParameter("tabs3", "all-import-processes");
-		%>
-
-		<liferay-ui:search-container
-			emptyResultsMessage="no-import-processes-were-found"
-			iteratorURL="<%= portletURL %>"
-			orderByCol="<%= orderByCol %>"
-			orderByComparator="<%= orderByComparator %>"
-			orderByType="<%= orderByType %>"
-			total="<%= BackgroundTaskLocalServiceUtil.getBackgroundTasksCount(themeDisplay.getScopeGroupId(), selPortlet.getPortletId(), PortletImportBackgroundTaskExecutor.class.getName()) %>"
-		>
-			<liferay-ui:search-container-results
-				results="<%= BackgroundTaskLocalServiceUtil.getBackgroundTasks(themeDisplay.getScopeGroupId(), selPortlet.getPortletId(), PortletImportBackgroundTaskExecutor.class.getName(), searchContainer.getStart(), searchContainer.getEnd(), searchContainer.getOrderByComparator()) %>"
-			/>
-
-			<liferay-ui:search-container-row
-				className="com.liferay.portal.model.BackgroundTask"
-				modelVar="backgroundTask"
-			>
-				<liferay-ui:search-container-column-text
-					name="user-name"
-					value="<%= backgroundTask.getUserName() %>"
-				/>
-
-				<liferay-ui:search-container-column-text
-					name="status"
-					value="<%= LanguageUtil.get(pageContext, backgroundTask.getStatusLabel()) %>"
-				/>
-
-				<liferay-ui:search-container-column-text
-					name="create-date"
-					orderable="<%= true %>"
-					orderableProperty="createDate"
-					value="<%= dateFormatDateTime.format(backgroundTask.getCreateDate()) %>"
-				/>
-
-				<liferay-ui:search-container-column-text
-					name="completion-date"
-					orderable="<%= true %>"
-					orderableProperty="completionDate"
-					value="<%= backgroundTask.getCompletionDate() != null ? dateFormatDateTime.format(backgroundTask.getCompletionDate()) : StringPool.BLANK %>"
-				/>
-
-				<liferay-ui:search-container-column-text>
-					<portlet:actionURL var="deleteBackgroundTaskURL">
-						<portlet:param name="struts_action" value="/group_pages/delete_background_task" />
-						<portlet:param name="redirect" value="<%= portletURL.toString() %>" />
-						<portlet:param name="backgroundTaskId" value="<%= String.valueOf(backgroundTask.getBackgroundTaskId()) %>" />
-					</portlet:actionURL>
-
-					<liferay-ui:icon-delete
-						label="true"
-						url="<%= deleteBackgroundTaskURL %>"
-					/>
-				</liferay-ui:search-container-column-text>
-			</liferay-ui:search-container-row>
-
-			<liferay-ui:search-iterator />
-		</liferay-ui:search-container>
+		<div class="process-list" id="<portlet:namespace />importProcesses">
+			<liferay-util:include page="/html/portlet/portlet_configuration/import_portlet_processes.jsp" />
+		</div>
 	</liferay-ui:section>
 </liferay-ui:tabs>
+
+<aui:script use="liferay-export-import">
+	<liferay-portlet:resourceURL copyCurrentRenderParameters="<%= false %>" var="importProcessesURL">
+		<portlet:param name="struts_action" value="/portlet_configuration/export_import" />
+		<portlet:param name="<%= Constants.CMD %>" value="<%= Constants.IMPORT %>" />
+		<portlet:param name="<%= SearchContainer.DEFAULT_CUR_PARAM %>" value="<%= ParamUtil.getString(request, SearchContainer.DEFAULT_CUR_PARAM) %>" />
+		<portlet:param name="<%= SearchContainer.DEFAULT_DELTA_PARAM %>" value="<%= ParamUtil.getString(request, SearchContainer.DEFAULT_DELTA_PARAM) %>" />
+		<portlet:param name="groupId" value="<%= String.valueOf(themeDisplay.getScopeGroupId()) %>" />
+		<portlet:param name="portletResource" value="<%= portletResource %>" />
+	</liferay-portlet:resourceURL>
+
+	new Liferay.ExportImport(
+		{
+			form: document.<portlet:namespace />fm1,
+			incompleteProcessMessageNode: '#<portlet:namespace />incompleteProcessMessage',
+			namespace: '<portlet:namespace />',
+			processesNode: '#importProcesses',
+			processesResourceURL: '<%= importProcessesURL.toString() %>'
+		}
+	);
+</aui:script>

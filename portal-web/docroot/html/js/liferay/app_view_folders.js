@@ -9,6 +9,8 @@ AUI.add(
 
 		var owns = AObject.owns;
 
+		var BROWSE_BY = 'browseBy';
+
 		var CSS_SELECTED = 'active';
 
 		var DATA_DIRECTION_RIGHT = 'data-direction-right';
@@ -318,6 +320,7 @@ AUI.add(
 
 						var entryConfig = instance.get('entry');
 
+						var dataBrowseBy = item.attr('data-browse-by');
 						var dataExpandFolder = item.attr('data-expand-folder');
 						var dataStructureId = item.attr(entryConfig.typeId);
 						var dataFolderId = item.attr(DATA_FOLDER_ID);
@@ -336,6 +339,10 @@ AUI.add(
 						var requestParams = {};
 
 						requestParams[instance.ns(PARAM_STRUTS_ACTION)] = instance.get(STR_STRUTS_ACTION);
+
+						if (dataBrowseBy) {
+							requestParams[instance.ns(BROWSE_BY)] = dataBrowseBy;
+						}
 
 						if (dataExpandFolder) {
 							requestParams[instance.ns(EXPAND_FOLDER)] = dataExpandFolder;
@@ -520,22 +527,12 @@ AUI.add(
 						if (breadcrumb) {
 							var breadcrumbContainer;
 
-							var journalBreadcrumb = breadcrumb.one('.portlet-breadcrumb ul');
+							var portletBreadcrumb = breadcrumb.one('.portlet-breadcrumb');
 
-							if (journalBreadcrumb) {
+							if (portletBreadcrumb) {
 								breadcrumbContainer = instance.byId('breadcrumbContainer');
 
-								breadcrumbContainer.setContent(journalBreadcrumb);
-							}
-
-							var portalBreadcrumb = breadcrumb.one('.portal-breadcrumb ul');
-
-							if (portalBreadcrumb) {
-								breadcrumbContainer = A.one('#breadcrumbs ul');
-
-								if (breadcrumbContainer) {
-									breadcrumbContainer.setContent(portalBreadcrumb.html());
-								}
+								breadcrumbContainer.setContent(portletBreadcrumb.html());
 							}
 						}
 					},
@@ -548,7 +545,9 @@ AUI.add(
 						if (addButton) {
 							var addButtonContainer = instance.byId('addButtonContainer');
 
-							addButtonContainer.replace(addButton.html());
+							if (addButtonContainer) {
+								addButtonContainer.replace(addButton.html());
+							}
 						}
 
 						var displayStyleButtons = instance.one('#displayStyleButtons', content);
@@ -587,7 +586,9 @@ AUI.add(
 
 						var addButtonContainer = instance.byId('addButtonContainer');
 
-						addButtonContainer.show();
+						if (addButtonContainer) {
+							addButtonContainer.show();
+						}
 
 						var sortButtonContainer = instance.byId('sortButtonContainer');
 

@@ -16,17 +16,18 @@ package com.liferay.portlet.wiki.lar;
 
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.lar.DataLevel;
+import com.liferay.portal.kernel.lar.ManifestSummary;
 import com.liferay.portal.kernel.lar.PortletDataContext;
 import com.liferay.portal.kernel.lar.PortletDataHandlerBoolean;
 import com.liferay.portal.kernel.lar.PortletDataHandlerControl;
 import com.liferay.portal.kernel.lar.StagedModelDataHandlerUtil;
+import com.liferay.portal.kernel.lar.StagedModelType;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.xml.Element;
-import com.liferay.portlet.wiki.NoSuchNodeException;
 import com.liferay.portlet.wiki.model.WikiNode;
 import com.liferay.portlet.wiki.model.WikiPage;
 import com.liferay.portlet.wiki.service.WikiPageLocalServiceUtil;
@@ -102,14 +103,11 @@ public class WikiDisplayPortletDataHandler extends WikiPortletDataHandler {
 			return StringPool.BLANK;
 		}
 
-		WikiNode node = null;
+		WikiNode node = WikiNodeUtil.fetchByPrimaryKey(nodeId);
 
-		try {
-			node = WikiNodeUtil.findByPrimaryKey(nodeId);
-		}
-		catch (NoSuchNodeException nsne) {
+		if (node == null) {
 			if (_log.isWarnEnabled()) {
-				_log.warn(nsne, nsne);
+				_log.warn("Unable to find wiki node");
 			}
 
 			return StringPool.BLANK;
@@ -123,14 +121,15 @@ public class WikiDisplayPortletDataHandler extends WikiPortletDataHandler {
 		rootElement.addAttribute(
 			"group-id", String.valueOf(portletDataContext.getScopeGroupId()));
 
-		StagedModelDataHandlerUtil.exportStagedModel(portletDataContext, node);
+		StagedModelDataHandlerUtil.exportReferenceStagedModel(
+			portletDataContext, portletId, node);
 
 		List<WikiPage> pages = WikiPageLocalServiceUtil.getPages(
 			node.getNodeId(), QueryUtil.ALL_POS, QueryUtil.ALL_POS);
 
 		for (WikiPage page : pages) {
-			StagedModelDataHandlerUtil.exportStagedModel(
-				portletDataContext, page);
+			StagedModelDataHandlerUtil.exportReferenceStagedModel(
+				portletDataContext, portletId, page);
 		}
 
 		return getExportDataRootElementString(rootElement);
@@ -163,6 +162,31 @@ public class WikiDisplayPortletDataHandler extends WikiPortletDataHandler {
 		}
 
 		return portletPreferences;
+	}
+
+	@Override
+	protected void doPrepareManifestSummary(
+			PortletDataContext portletDataContext,
+			PortletPreferences portletPreferences)
+		throws Exception {
+
+		ManifestSummary manifestSummary =
+			portletDataContext.getManifestSummary();
+
+		if ((portletPreferences == null) ||
+			(manifestSummary.getModelAdditionCount(WikiPage.class) > -1)) {
+
+			return;
+		}
+
+		long nodeId = GetterUtil.getLong(
+			portletPreferences.getValue("nodeId", StringPool.BLANK));
+
+		if (nodeId > 0) {
+			manifestSummary.addModelAdditionCount(
+				new StagedModelType(WikiPage.class),
+				WikiPageLocalServiceUtil.getPagesCount(nodeId));
+		}
 	}
 
 	private static Log _log = LogFactoryUtil.getLog(

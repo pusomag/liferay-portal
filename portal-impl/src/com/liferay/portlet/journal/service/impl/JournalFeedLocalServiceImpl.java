@@ -18,6 +18,7 @@ import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.systemevent.SystemEvent;
 import com.liferay.portal.kernel.util.CharPool;
 import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
@@ -179,6 +180,7 @@ public class JournalFeedLocalServiceImpl
 	}
 
 	@Override
+	@SystemEvent(type = SystemEventConstants.TYPE_DELETE)
 	public void deleteFeed(JournalFeed feed)
 		throws PortalException, SystemException {
 
@@ -192,12 +194,6 @@ public class JournalFeedLocalServiceImpl
 			feed.getCompanyId(), JournalFeed.class.getName(),
 			ResourceConstants.SCOPE_INDIVIDUAL, feed.getId());
 
-		// System event
-
-		systemEventLocalService.addSystemEvent(
-			0, feed.getGroupId(), JournalFeed.class.getName(), feed.getId(),
-			feed.getUuid(), null, SystemEventConstants.TYPE_DELETE, null);
-
 		// Expando
 
 		expandoValueLocalService.deleteValues(
@@ -210,7 +206,7 @@ public class JournalFeedLocalServiceImpl
 
 		JournalFeed feed = journalFeedPersistence.findByPrimaryKey(feedId);
 
-		deleteFeed(feed);
+		journalFeedLocalService.deleteFeed(feed);
 	}
 
 	@Override
@@ -219,7 +215,7 @@ public class JournalFeedLocalServiceImpl
 
 		JournalFeed feed = journalFeedPersistence.findByG_F(groupId, feedId);
 
-		deleteFeed(feed);
+		journalFeedLocalService.deleteFeed(feed);
 	}
 
 	@Override
@@ -360,30 +356,28 @@ public class JournalFeedLocalServiceImpl
 
 			return true;
 		}
-		else {
-			try {
-				DDMStructure ddmStructure =
-					ddmStructureLocalService.getStructure(
-						groupId,
-						PortalUtil.getClassNameId(JournalArticle.class),
-						structureId);
 
-				Document document = SAXReaderUtil.read(ddmStructure.getXsd());
+		try {
+			DDMStructure ddmStructure =
+				ddmStructureLocalService.getStructure(
+					groupId, PortalUtil.getClassNameId(JournalArticle.class),
+					structureId);
 
-				contentField = HtmlUtil.escapeXPathAttribute(contentField);
+			Document document = SAXReaderUtil.read(ddmStructure.getXsd());
 
-				XPath xPathSelector = SAXReaderUtil.createXPath(
-					"//dynamic-element[@name="+ contentField + "]");
+			contentField = HtmlUtil.escapeXPathAttribute(contentField);
 
-				Node node = xPathSelector.selectSingleNode(document);
+			XPath xPathSelector = SAXReaderUtil.createXPath(
+				"//dynamic-element[@name="+ contentField + "]");
 
-				if (node != null) {
-					return true;
-				}
+			Node node = xPathSelector.selectSingleNode(document);
+
+			if (node != null) {
+				return true;
 			}
-			catch (Exception e) {
-				_log.error(e, e);
-			}
+		}
+		catch (Exception e) {
+			_log.error(e, e);
 		}
 
 		return false;

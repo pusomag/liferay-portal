@@ -37,16 +37,113 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author Hugo Huijser
  */
 public class XMLSourceProcessor extends BaseSourceProcessor {
 
+	public static String formatXML(String content) {
+		String newContent = StringUtil.replace(content, "\"/>\n", "\" />\n");
+
+		Pattern pattern1 = Pattern.compile(">\n\t+<!--[\n ]");
+		Pattern pattern2 = Pattern.compile("[\t ]-->\n[\t<]");
+
+		while (true) {
+			Matcher matcher = pattern1.matcher(newContent);
+
+			if (matcher.find()) {
+				newContent = StringUtil.replaceFirst(
+					newContent, ">\n", ">\n\n", matcher.start());
+
+				continue;
+			}
+
+			matcher = pattern2.matcher(newContent);
+
+			if (!matcher.find()) {
+				break;
+			}
+
+			newContent = StringUtil.replaceFirst(
+				newContent, "-->\n", "-->\n\n", matcher.start());
+		}
+
+		return newContent;
+	}
+
+	protected String fixAntXMLProjectName(String fileName, String content) {
+		int x = 0;
+
+		if (fileName.endsWith("-ext/build.xml")) {
+			if (fileName.startsWith("ext/")) {
+				x = 4;
+			}
+		}
+		else if (fileName.endsWith("-hook/build.xml")) {
+			if (fileName.startsWith("hooks/")) {
+				x = 6;
+			}
+		}
+		else if (fileName.endsWith("-layouttpl/build.xml")) {
+			if (fileName.startsWith("layouttpl/")) {
+				x = 10;
+			}
+		}
+		else if (fileName.endsWith("-portlet/build.xml")) {
+			if (fileName.startsWith("portlets/")) {
+				x = 9;
+			}
+		}
+		else if (fileName.endsWith("-theme/build.xml")) {
+			if (fileName.startsWith("themes/")) {
+				x = 7;
+			}
+		}
+		else if (fileName.endsWith("-web/build.xml") &&
+				 !fileName.endsWith("/ext-web/build.xml")) {
+
+			if (fileName.startsWith("webs/")) {
+				x = 5;
+			}
+		}
+		else {
+			return content;
+		}
+
+		int y = fileName.indexOf("/", x);
+
+		String correctProjectElementText =
+			"<project name=\"" + fileName.substring(x, y) + "\"";
+
+		if (!content.contains(correctProjectElementText)) {
+			x = content.indexOf("<project name=\"");
+
+			y = content.indexOf("\"", x) + 1;
+			y = content.indexOf("\"", y) + 1;
+
+			content =
+				content.substring(0, x) + correctProjectElementText +
+					content.substring(y);
+
+			processErrorMessage(
+				fileName, fileName + " has an incorrect project name");
+		}
+
+		return content;
+	}
+
 	@Override
-	protected void doFormat() throws Exception {
-		String[] excludes = new String[] {"**\\classes\\**", "**\\bin\\**"};
+	protected void format() throws Exception {
+		String[] excludes = new String[] {
+			"**\\.idea\\**", "**\\bin\\**", "**\\classes\\**"
+		};
 		String[] includes = new String[] {"**\\*.xml"};
+
+		Properties exclusions = getExclusionsProperties(
+			"source_formatter_xml_exclusions.properties");
 
 		List<String> fileNames = getFileNames(excludes, includes);
 
@@ -56,24 +153,18 @@ public class XMLSourceProcessor extends BaseSourceProcessor {
 			fileName = StringUtil.replace(
 				fileName, StringPool.BACK_SLASH, StringPool.SLASH);
 
+			if ((exclusions != null) &&
+				(exclusions.getProperty(fileName) != null)) {
+
+				continue;
+			}
+
 			String content = fileUtil.read(file);
 
 			String newContent = content;
 
 			if (!fileName.contains("/build")) {
-				Properties leadingSpacesExclusions = getExclusionsProperties(
-					"source_formatter_xml_leading_spaces_exclusions." +
-						"properties");
-
-				String excluded = null;
-
-				if (leadingSpacesExclusions != null) {
-					excluded = leadingSpacesExclusions.getProperty(fileName);
-				}
-
-				if (excluded == null) {
-					newContent = trimContent(newContent, false);
-				}
+				newContent = trimContent(newContent, false);
 			}
 
 			if (fileName.contains("/build") && !fileName.contains("/tools/")) {
@@ -106,103 +197,16 @@ public class XMLSourceProcessor extends BaseSourceProcessor {
 				newContent = formatWebXML(fileName, content);
 			}
 
-			if ((newContent != null) && !content.equals(newContent)) {
+			newContent = formatXML(newContent);
+
+			if (isAutoFix() && (newContent != null) &&
+				!content.equals(newContent)) {
+
 				fileUtil.write(file, newContent);
 
 				sourceFormatterHelper.printError(fileName, file);
 			}
 		}
-	}
-
-	protected String fixAntXMLProjectName(String fileName, String content) {
-		int x = 0;
-
-		if (fileName.endsWith("-ext/build.xml")) {
-			x = fileName.indexOf("ext/");
-
-			if (x == -1) {
-				x = 0;
-			}
-			else {
-				x = x + 4;
-			}
-		}
-		else if (fileName.endsWith("-hook/build.xml")) {
-			x = fileName.indexOf("hooks/");
-
-			if (x == -1) {
-				x = 0;
-			}
-			else {
-				x = x + 6;
-			}
-		}
-		else if (fileName.endsWith("-layouttpl/build.xml")) {
-			x = fileName.indexOf("layouttpl/");
-
-			if (x == -1) {
-				x = 0;
-			}
-			else {
-				x = x + 10;
-			}
-		}
-		else if (fileName.endsWith("-portlet/build.xml")) {
-			x = fileName.indexOf("portlets/");
-
-			if (x == -1) {
-				x = 0;
-			}
-			else {
-				x = x + 9;
-			}
-		}
-		else if (fileName.endsWith("-theme/build.xml")) {
-			x = fileName.indexOf("themes/");
-
-			if (x == -1) {
-				x = 0;
-			}
-			else {
-				x = x + 7;
-			}
-		}
-		else if (fileName.endsWith("-web/build.xml") &&
-				 !fileName.endsWith("/ext-web/build.xml")) {
-
-			x = fileName.indexOf("webs/");
-
-			if (x == -1) {
-				x = 0;
-			}
-			else {
-				x = x + 5;
-			}
-		}
-		else {
-			return content;
-		}
-
-		int y = fileName.indexOf("/", x);
-
-		String correctProjectElementText =
-			"<project name=\"" + fileName.substring(x, y) + "\"";
-
-		if (!content.contains(correctProjectElementText)) {
-			x = content.indexOf("<project name=\"");
-
-			y = content.indexOf("\"", x) + 1;
-			y = content.indexOf("\"", y) + 1;
-
-			content =
-				content.substring(0, x) + correctProjectElementText +
-					content.substring(y);
-
-			processErrorMessage(
-				fileName, fileName + " has an incorrect project name");
-		}
-
-		return content;
 	}
 
 	protected String formatAntXML(String fileName, String content)
@@ -229,8 +233,7 @@ public class XMLSourceProcessor extends BaseSourceProcessor {
 
 			if (name.compareTo(previousName) < -1) {
 				processErrorMessage(
-					fileName,
-					fileName + " has an unordered target " + name);
+					fileName, fileName + " has an unordered target " + name);
 
 				break;
 			}
@@ -618,7 +621,9 @@ public class XMLSourceProcessor extends BaseSourceProcessor {
 		for (String urlPattern : urlPatterns) {
 			sb.append("\t<servlet-mapping>\n");
 			sb.append("\t\t<servlet-name>I18n Servlet</servlet-name>\n");
-			sb.append("\t\t<url-pattern>/" + urlPattern +"/*</url-pattern>\n");
+			sb.append("\t\t<url-pattern>/");
+			sb.append(urlPattern);
+			sb.append("/*</url-pattern>\n");
 			sb.append("\t</servlet-mapping>\n");
 		}
 
@@ -652,9 +657,9 @@ public class XMLSourceProcessor extends BaseSourceProcessor {
 		sb.append("\t\t\t<url-pattern>/c/portal/protected</url-pattern>\n");
 
 		for (String urlPattern : urlPatterns) {
-			sb.append(
-				"\t\t\t<url-pattern>/" + urlPattern +
-					"/c/portal/protected</url-pattern>\n");
+			sb.append("\t\t\t<url-pattern>/");
+			sb.append(urlPattern);
+			sb.append("/c/portal/protected</url-pattern>\n");
 		}
 
 		return newContent.substring(0, x) + sb.toString() +

@@ -182,10 +182,7 @@ public class EditEntryAction extends PortletAction {
 			liferayPortletConfig.getPortletId() +
 				SessionMessages.KEY_SUFFIX_DELETE_SUCCESS_DATA, data);
 
-		SessionMessages.add(
-			actionRequest,
-			liferayPortletConfig.getPortletId() +
-				SessionMessages.KEY_SUFFIX_HIDE_DEFAULT_SUCCESS_MESSAGE);
+		hideDefaultSuccessMessage(liferayPortletConfig, actionRequest);
 	}
 
 	protected void deleteEntries(ActionRequest actionRequest) throws Exception {
@@ -220,7 +217,10 @@ public class EditEntryAction extends PortletAction {
 		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
 			WebKeys.THEME_DISPLAY);
 
-		TrashEntryServiceUtil.deleteEntries(themeDisplay.getScopeGroupId());
+		long groupId = ParamUtil.getLong(
+			actionRequest, "groupId", themeDisplay.getScopeGroupId());
+
+		TrashEntryServiceUtil.deleteEntries(groupId);
 	}
 
 	protected List<ObjectValuePair<String, Long>> getEntryOVPs(
@@ -266,23 +266,21 @@ public class EditEntryAction extends PortletAction {
 
 			return getEntryOVPs(entry.getClassName(), entry.getClassPK());
 		}
-		else {
-			long[] restoreEntryIds = StringUtil.split(
-				ParamUtil.getString(actionRequest, "restoreTrashEntryIds"), 0L);
 
-			List<ObjectValuePair<String, Long>> entryOVPs =
-				new ArrayList<ObjectValuePair<String, Long>>();
+		long[] restoreEntryIds = StringUtil.split(
+			ParamUtil.getString(actionRequest, "restoreTrashEntryIds"), 0L);
 
-			for (int i = 0; i < restoreEntryIds.length; i++) {
-				TrashEntry entry = TrashEntryServiceUtil.restoreEntry(
-					trashEntryId);
+		List<ObjectValuePair<String, Long>> entryOVPs =
+			new ArrayList<ObjectValuePair<String, Long>>();
 
-				entryOVPs.addAll(
-					getEntryOVPs(entry.getClassName(), entry.getClassPK()));
-			}
+		for (int i = 0; i < restoreEntryIds.length; i++) {
+			TrashEntry entry = TrashEntryServiceUtil.restoreEntry(trashEntryId);
 
-			return entryOVPs;
+			entryOVPs.addAll(
+				getEntryOVPs(entry.getClassName(), entry.getClassPK()));
 		}
+
+		return entryOVPs;
 	}
 
 	protected List<ObjectValuePair<String, Long>> restoreOverride(
