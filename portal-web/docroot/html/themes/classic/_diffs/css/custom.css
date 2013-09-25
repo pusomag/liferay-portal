@@ -300,14 +300,6 @@ $dockbarOpenGradientStart: #0EA6F9;
 			padding: 0;
 			right: 10px;
 			top: 50%;
-
-			a {
-				text-decoration: none;
-
-				i {
-					color: #FFF;
-				}
-			}
 		}
 	}
 
@@ -336,17 +328,24 @@ $dockbarOpenGradientStart: #0EA6F9;
 
 	.portlet-icons {
 		float: none;
-
-		.portlet-close-icon {
-			border-width: 0;
-		}
 	}
 
 	.page-maximized .portlet-icons {
 		font-size: 11px;
 	}
 
-	/* ---------- Set Password Reminder Portlet ---------- */
+	.dropdown-menu > li.portlet-close > a {
+		color: #C00;
+		font-weight: bold;
+
+		&:focus, &:hover {
+			background-color: #C00;
+			background-image: none;
+			color: #FFF;
+		}
+	}
+
+	/* ---------- Set password reminder portlet ---------- */
 
 	.update-reminder-query {
 		.control-group {
@@ -363,7 +362,7 @@ $dockbarOpenGradientStart: #0EA6F9;
 		}
 	}
 
-	/* ---------- Staging Bar ---------- */
+	/* ---------- Staging bar ---------- */
 
 	.navbar-inner .nav.staging-bar {
 		border-top-width: 0;

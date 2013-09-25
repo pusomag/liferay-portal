@@ -42,6 +42,9 @@ if (Validator.isNotNull(scriptContent)) {
 							Map<String, TemplateVariableGroup> templateVariableGroups = TemplateContextHelper.getTemplateVariableGroups(templateHandlerClassNameId, classPK, language, locale);
 
 							for (TemplateVariableGroup templateVariableGroup : templateVariableGroups.values()) {
+								if (templateVariableGroup.isEmpty()) {
+									continue;
+								}
 							%>
 
 								<div class="palette-section">
@@ -97,7 +100,7 @@ if (Validator.isNotNull(scriptContent)) {
 	</liferay-ui:panel>
 </liferay-ui:panel-container>
 
-<aui:script use="aui-ace-autocomplete-freemarker,aui-ace-autocomplete-plugin,aui-ace-autocomplete-velocity,aui-toggler,aui-popover,autocomplete-base,autocomplete-filters,event-mouseenter,event-outside,resize,transition">
+<aui:script use="aui-ace-autocomplete-freemarker,aui-ace-autocomplete-plugin,aui-ace-autocomplete-velocity,aui-toggler,aui-popover,autocomplete-base,autocomplete-filters,event-mouseenter,event-outside,liferay-util-window,resize,transition">
 	var AArray = A.Array;
 	var ACPlugin = A.Plugin.AceAutoComplete;
 	var AObject = A.Object;
@@ -112,6 +115,18 @@ if (Validator.isNotNull(scriptContent)) {
 	var panelScriptContainer = A.one('#templateScriptContainer');
 
 	var editorContainer = panelScriptContainer.one('#<portlet:namespace />editorContainer');
+
+	if (Liferay.Util.getTop() !== A.config.win) {
+		var dialog = Liferay.Util.getWindow();
+
+		if (dialog && A.Lang.isFunction(dialog._detachUIHandlesAutohide)) {
+			dialog._detachUIHandlesAutohide();
+
+			if (dialog.iframe) {
+				dialog.iframe.set('closeOnEscape', false);
+			}
+		}
+	}
 
 	var prevEditorContent;
 	var richEditor;
@@ -544,7 +559,7 @@ private String _getPaletteItemTitle(PageContext pageContext, String label, Class
 	String javadocURL = null;
 
 	if (className.startsWith("com.liferay")) {
-		javadocURL = "http://docs.liferay.com/portal/6.1/javadocs/";
+		javadocURL = "http://docs.liferay.com/portal/6.2/javadocs/";
 	}
 
 	if (Validator.isNotNull(javadocURL)) {
